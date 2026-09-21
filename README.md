@@ -1,64 +1,52 @@
 # Real-Time Temperature Monitoring System Using STM32 Nucleo and FreeRTOS
 
-## Project Overview
+## Overview
 
-This project implements a **Real-Time Temperature Monitoring System** using the **STM32 Nucleo-F446RE** development board and **FreeRTOS**. The system continuously acquires temperature data from an **LM35 Temperature Sensor** through the ADC peripheral, processes the sensor readings, and distributes the data to multiple FreeRTOS tasks using queues.
+This project implements a Real-Time Temperature Monitoring System using the STM32 Nucleo-F446RE development board and FreeRTOS.
 
-The measured temperature is displayed on an **I2C 16x2 LCD**, transmitted through **UART** for serial monitoring, and used to control an **LED** and **Buzzer** for over-temperature alerts.
+The system continuously reads temperature data from an LM35 temperature sensor through the ADC peripheral and distributes the acquired data across multiple FreeRTOS tasks using Queues, Mutexes, Event Groups, and Task Notifications.
 
-This project demonstrates the practical implementation of:
+Temperature information is:
 
-- FreeRTOS Task Management
-- Inter-Task Communication using Queues
-- ADC Sensor Interfacing
-- UART Communication
-- I2C LCD Interfacing
-- Real-Time Embedded System Design
+- Displayed on an I2C 16x2 LCD
+- Sent to a PC through UART
+- Used to generate warning and critical alarms using an LED and Buzzer
+
+The project demonstrates practical implementation of multitasking, synchronization, and inter-task communication in FreeRTOS.
 
 ---
 
 ## Features
 
-✅ LM35 Temperature Sensor Interfacing
-
-✅ ADC-Based Temperature Acquisition
-
-✅ I2C LCD Temperature Display
-
-✅ UART Transmission of:
-- ADC Value
-- Voltage
-- Temperature
-
-✅ LED Status Indication
-
-✅ Buzzer Alarm System
-
-✅ FreeRTOS Multitasking
-
-✅ Queue-Based Inter-Task Communication
-
-✅ Periodic Task Scheduling
-
-✅ Modular Firmware Architecture
+- LM35 Temperature Sensor Interfacing
+- ADC Data Acquisition
+- I2C LCD Temperature Display
+- UART Logging
+- LED Warning Indication
+- Buzzer Critical Alarm
+- FreeRTOS Task Scheduling
+- Queue-Based Communication
+- Mutex Protection for Shared Data
+- Event Group Status Management
+- Task Notification Mechanism
+- Priority-Based Task Execution
 
 ---
 
-## Hardware Components
+## Hardware Used
 
 | Component | Description |
 |------------|------------|
 | STM32 Nucleo-F446RE | Main Controller |
 | LM35 | Temperature Sensor |
 | I2C LCD 16x2 | Temperature Display |
-| LED | Status Indicator |
-| Buzzer | Temperature Alarm |
+| LED | Warning Indicator |
+| Buzzer | Critical Alarm |
 | USB Cable | Programming & UART |
-| Jumper Wires | Connections |
 
 ---
 
-## Software Tools
+## Software Used
 
 - STM32CubeIDE
 - STM32 HAL Drivers
@@ -67,131 +55,213 @@ This project demonstrates the practical implementation of:
 
 ---
 
-## System Architecture
+## RTOS Architecture
 
 ```text
-                     +----------------+
-                     |  LM35 Sensor   |
-                     +--------+-------+
-                              |
-                              v
-                     +----------------+
-                     |  Sensor Task   |
-                     +--------+-------+
-                              |
-                              |
-                          Queue
-                              |
-       ------------------------------------------------
-       |                      |                       |
-       v                      v                       v
+                LM35 Sensor
+                     |
+                     v
+              +-------------+
+              | Sensor Task |
+              +-------------+
+                     |
+          -----------------------
+          |                     |
+          v                     v
 
-+--------------+    +----------------+    +----------------+
-|   LCD Task   |    |   UART Task    |    |   Alarm Task   |
-+--------------+    +----------------+    +----------------+
-                                                |
-                                      ---------------------
-                                      |                   |
-                                      v                   v
-                                   LED ON             Buzzer ON
+     Shared Data            Log Queue
+      (Mutex)                  |
+          |                    |
+          v                    v
+
+    +------------+      +-------------+
+    |  LCD Task  |      | Logger Task |
+    +------------+      +-------------+
+                               |
+                               v
+                            UART
+
+                     Event Groups
+                           |
+                           v
+
+                    +-------------+
+                    | Alarm Task  |
+                    +-------------+
+                           |
+                   ----------------
+                   |              |
+                   v              v
+                 LED           Buzzer
 ```
 
 ---
 
-## FreeRTOS Task Structure
+## FreeRTOS Objects Used
 
-### 1. Sensor Task
+### Queue
 
-#### Responsibilities
+Used for transferring temperature data from Sensor Task to Logger Task.
 
-- Read ADC value from LM35
+```c
+LogQueue = xQueueCreate(10,sizeof(TempData_t));
+```
+
+---
+
+### Mutex
+
+Used to protect shared temperature data.
+
+```c
+TempMutex = xSemaphoreCreateMutex();
+```
+
+---
+
+### Event Group
+
+Used to represent system status.
+
+```c
+TEMP_NORMAL_BIT
+TEMP_WARNING_BIT
+TEMP_CRITICAL_BIT
+```
+
+---
+
+### Task Notifications
+
+Used to immediately wake up Alarm Task when warning or critical temperature occurs.
+
+```c
+xTaskNotifyGive(AlarmTaskHandle);
+```
+
+---
+
+## Task Details
+
+### Sensor Task
+
+Priority: 3
+
+Responsibilities:
+
+- Read ADC value
 - Convert ADC to Voltage
 - Convert Voltage to Temperature
+- Update shared data
 - Send data to Queue
+- Update Event Groups
+- Notify Alarm Task
 
-#### Priority
-
-```c
-Priority = 3
-```
-
-#### Execution Period
+Execution Period:
 
 ```c
-1000 ms
+500 ms
 ```
 
 ---
 
-### 2. LCD Task
+### LCD Task
 
-#### Responsibilities
+Priority: 2
 
-- Receive temperature data from Queue
-- Display temperature on I2C LCD
+Responsibilities:
 
-#### Priority
+- Read shared temperature data
+- Display temperature on LCD
+- Display system state:
+
+```text
+NORMAL
+WARNING
+CRITICAL
+```
+
+Execution Period:
 
 ```c
-Priority = 2
+500 ms
 ```
 
 ---
 
-### 3. UART Task
+### Logger Task
 
-#### Responsibilities
+Priority: 1
 
-Transmit:
+Responsibilities:
 
-```text
-ADC Value
-Voltage
-Temperature
-```
+- Receive data from Queue
+- Send ADC value
+- Send voltage
+- Send temperature through UART
 
-through USART2.
-
-Example:
+Example Output:
 
 ```text
-ADC=323
-Voltage=0.260 V
-Temperature=26.0 C
-```
-
-#### Priority
-
-```c
-Priority = 2
+ADC=327
+V=0.264
+T=26.40
 ```
 
 ---
 
-### 4. Alarm Task
+### Alarm Task
 
-#### Responsibilities
+Priority: 4 (Highest)
 
-Monitor temperature level.
+Responsibilities:
 
-If temperature exceeds threshold:
+- Monitor Event Groups
+- Control LED
+- Control Buzzer
 
-```text
-LED ON
-Buzzer ON
-```
+Behavior:
 
-Otherwise:
+#### NORMAL
 
 ```text
 LED OFF
 Buzzer OFF
 ```
 
-#### Priority
+#### WARNING
 
-```c
-Priority = 1
+```text
+LED Blink
+```
+
+#### CRITICAL
+
+```text
+LED ON
+Buzzer ON
+```
+
+---
+
+## Temperature Levels
+
+### Normal
+
+```text
+Temperature < 35°C
+```
+
+### Warning
+
+```text
+35°C ≤ Temperature < 45°C
+```
+
+### Critical
+
+```text
+Temperature ≥ 45°C
 ```
 
 ---
@@ -201,7 +271,7 @@ Priority = 1
 ```c
 typedef struct
 {
-    uint16_t adc_value;
+    uint16_t adc;
     float voltage;
     float temperature;
 } TempData_t;
@@ -209,117 +279,27 @@ typedef struct
 
 ---
 
-## Queue Implementation
-
-### Queue Creation
-
-```c
-QueueHandle_t TempQueue;
-
-TempQueue = xQueueCreate(
-                        5,
-                        sizeof(TempData_t)
-                       );
-```
-
-### Queue Send
-
-```c
-xQueueSend(
-           TempQueue,
-           &tempData,
-           portMAX_DELAY
-          );
-```
-
-### Queue Receive
-
-```c
-xQueueReceive(
-              TempQueue,
-              &tempData,
-              portMAX_DELAY
-             );
-```
-
----
-
 ## Temperature Calculation
 
-### ADC Conversion
-
-STM32 ADC Resolution:
-
-```text
-12-bit ADC
-Range = 0 – 4095
-```
-
-Voltage Calculation:
+### ADC to Voltage
 
 ```c
-Voltage = (ADC_Value * 3.3) / 4095
+voltage =
+((float)adc * 3.3f) / 4095.0f;
 ```
 
----
+### Voltage to Temperature
 
-### LM35 Temperature Calculation
-
-LM35 Characteristics:
+LM35 Output:
 
 ```text
 10mV = 1°C
 ```
 
-Temperature:
+Formula:
 
 ```c
-Temperature = Voltage * 100
-```
-
-Example:
-
-```text
-Voltage = 0.300V
-
-Temperature = 30°C
-```
-
----
-
-## LCD Output
-
-```text
-Temp:
-26.5 C
-```
-
----
-
-## UART Output
-
-```text
-ADC=328
-Voltage=0.264 V
-Temperature=26.40 C
-```
-
----
-
-## Alarm Logic
-
-### Temperature < 35°C
-
-```text
-LED OFF
-Buzzer OFF
-```
-
-### Temperature ≥ 35°C
-
-```text
-LED ON
-Buzzer ON
+temperature = voltage * 100.0f;
 ```
 
 ---
@@ -332,10 +312,7 @@ Buzzer ON
 |------------|---------|
 | Resolution | 12-bit |
 | Channel | ADC Channel 0 |
-| Trigger | Software |
-| Sampling | Single Conversion |
-
----
+| Conversion | Single |
 
 ### UART
 
@@ -343,19 +320,13 @@ Buzzer ON
 |------------|---------|
 | Instance | USART2 |
 | Baud Rate | 115200 |
-| Data Bits | 8 |
-| Stop Bits | 1 |
-| Parity | None |
-
----
 
 ### I2C
 
 | Parameter | Value |
 |------------|---------|
 | Instance | I2C1 |
-| Clock Speed | 100 kHz |
-| Addressing Mode | 7-bit |
+| Clock Speed | 100kHz |
 
 ---
 
@@ -365,82 +336,67 @@ Buzzer ON
 
 ```c
 xTaskCreate()
-
 vTaskStartScheduler()
-
 vTaskDelay()
-
-vTaskDelayUntil()
 ```
-
----
 
 ### Queue Management
 
 ```c
 xQueueCreate()
-
 xQueueSend()
-
 xQueueReceive()
 ```
 
----
+### Mutex
 
-## Folder Structure
+```c
+xSemaphoreCreateMutex()
+xSemaphoreTake()
+xSemaphoreGive()
+```
 
-```text
-RTOS_TEMP_MONITER
-│
-├── Core
-│   ├── Inc
-│   │   ├── main.h
-│   │   ├── FreeRTOSConfig.h
-│   │   └── lcd_i2c.h
-│   │
-│   └── Src
-│       ├── main.c
-│       ├── lcd_i2c.c
-│       ├── stm32f4xx_it.c
-│       └── stm32f4xx_hal_msp.c
-│
-├── Drivers
-│
-├── Middlewares
-│   └── FreeRTOS
-│
-└── README.md
+### Event Groups
+
+```c
+xEventGroupCreate()
+xEventGroupSetBits()
+xEventGroupClearBits()
+xEventGroupGetBits()
+```
+
+### Task Notification
+
+```c
+xTaskNotifyGive()
+ulTaskNotifyTake()
 ```
 
 ---
 
 ## Learning Outcomes
 
-Through this project, the following Embedded Systems concepts were implemented and practiced:
-
-- FreeRTOS Task Scheduling
-- Real-Time System Design
-- Queue-Based Communication
-- STM32 ADC Programming
+- FreeRTOS Multitasking
+- Queue Communication
+- Mutex Synchronization
+- Event Group Management
+- Task Notifications
+- ADC Interfacing
 - UART Communication
-- I2C Communication
-- Sensor Interfacing
-- Embedded Firmware Development
-- Peripheral Driver Usage
-- Multitasking Application Design
+- I2C LCD Interfacing
+- Embedded System Design
+- Real-Time Monitoring Applications
 
 ---
 
-## Future Enhancements
+## Future Improvements
 
-- Data Logging to SD Card
-- Wi-Fi Monitoring using ESP32
-- MQTT Cloud Integration
-- Mobile Application Monitoring
+- SD Card Data Logging
+- ESP32 Wi-Fi Integration
+- MQTT Cloud Monitoring
+- Mobile Application Dashboard
 - FreeRTOS Software Timers
-- Low Power Mode Support
-- Temperature History Graph
-- Remote Alarm Notifications
+- Low Power Operation
 
 ---
 
@@ -448,7 +404,7 @@ Through this project, the following Embedded Systems concepts were implemented a
 
 ### Guni Reddy Charan Kumar Reddy
 
-**B.Tech – Electronics and Communication Engineering**
+Electronics and Communication Engineering
 
 Skills:
 - Embedded C
@@ -459,9 +415,3 @@ Skills:
 - ADC
 - Embedded Systems
 - IoT
-
----
-
-## License
-
-This project is developed for educational, learning, and research purposes.
