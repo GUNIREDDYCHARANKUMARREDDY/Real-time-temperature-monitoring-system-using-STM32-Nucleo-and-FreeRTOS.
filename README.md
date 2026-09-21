@@ -32,6 +32,38 @@ The project demonstrates practical implementation of multitasking, synchronizati
 - Priority-Based Task Execution
 
 ---
+## Project Demonstration
+
+### Normal State
+Temperature = 32.2°C
+
+- LCD displays NORMAL
+- LED OFF
+- Buzzer OFF
+
+<img src="Images/normal.jpeg" width="600">
+
+---
+
+### Warning State
+Temperature = 39.4°C
+
+- LCD displays WARNING
+- LED ON
+- Buzzer OFF
+
+<img src="Images/warning.jpeg" width="600">
+
+---
+
+### Critical State
+Temperature = 46.8°C
+
+- LCD displays CRITICAL
+- LED ON
+- Buzzer ON
+
+<img src="Images/critical.jpeg" width="600">
 
 ## Hardware Used
 
