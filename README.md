@@ -65,6 +65,21 @@ Temperature = 46.8°C
 
 <img src="Images/critical.jpeg" width="600">
 
+## UART Monitoring Output
+
+Real-time temperature, voltage, and ADC values transmitted through UART for monitoring and debugging.
+
+- Continuous ADC acquisition
+- Voltage calculation from ADC readings
+- Temperature conversion and logging
+- Serial monitoring using Tera Term
+
+<img src="Images/UART.jpeg" width="800">
+
+---
+
+<img src="Images/warning.jpeg" width="600">
+
 ## Hardware Used
 
 | Component | Description |
