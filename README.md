@@ -78,7 +78,6 @@ Real-time temperature, voltage, and ADC values transmitted through UART for moni
 
 ---
 
-<img src="Images/warning.jpeg" width="600">
 
 ## Hardware Used
 
